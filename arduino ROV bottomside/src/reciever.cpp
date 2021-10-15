@@ -2,7 +2,10 @@
 #include <Servo.h>
 
 int values[4] = {0,0,0,0};
+int gotValues[4];
 char inbytes[12];
+bool breakstate = false; 
+
 
 //init servos 
 Servo a;
@@ -29,6 +32,8 @@ void getDataStream(){       //serial data function
 
   int counter = 0;
 
+  breakstate = false;
+
   delay(5);                // needed to allow all of the data in a packet be recieved
 
   if(Serial.available() == 0){  // check if serial buffer is empty
@@ -42,28 +47,40 @@ void getDataStream(){       //serial data function
      delay(1);
 
      if(counter > 50){
-
-        break;
+      breakstate = true;
+      break;
 
      }
     }
-    
-    Serial.readBytes(inbytes, 12);        //load packet into array 
 
+    if(breakstate == false){
+      Serial.readBytes(inbytes, 12);        //load packet into array 
+    }
+
+    for(int i = 0 ; i<=11; i++){
+      if(int(inbytes[i]) < 48 or int(inbytes[i]) > 57){
+        breakstate = true;
+      }
+    }
   }
   
   Serial.read();                        //make sure serial buffer is cleared
 
-  for(int i = 0; i <= 3; i++){
+  if(breakstate == false){
 
-    values[i]= ((int(inbytes[i*3])-48)* 100) + ((int(inbytes[(i*3)+1])-48)*10) + (int(inbytes[(i*3)+2])-48);          // math to convert characters into their int values
+    for(int i = 0; i <= 3; i++){
 
-    if(values[i]< 0){
+      values[i]= ((int(inbytes[i*3])-48)* 100) + ((int(inbytes[(i*3)+1])-48)*10) + (int(inbytes[(i*3)+2])-48);          // math to convert characters into their int values
 
-      values[i] = 0;                //if value is negative (never should be in any cases) reset it to 0 
+      if(values[i]< 0){
 
+        values[i] = 0;                //if value is negative (never should be in any cases) reset it to 0 
+
+      }
     }
   }
+
+  
 }
 
 void loop() {
@@ -72,15 +89,15 @@ void loop() {
 
   for(int i = 0; i<=3; i++){
 
-    values[i] = map(values[i],100,900,0,180);         // map variables to within 0 - 180 range 
+    gotValues[i] = map(values[i],100,900,0,180);         // map variables to within 0 - 180 range 
 
   }
 
 //set pwm outputs to variables (need to add mixers etc)
-  a.write(values[0]);
-  b.write(values[1]);
-  c.write(values[2]);
-  d.write(values[3]);
+  a.write(gotValues[0]);
+  b.write(gotValues[1]);
+  c.write(gotValues[2]);
+  d.write(gotValues[3]);
 
 }
 
