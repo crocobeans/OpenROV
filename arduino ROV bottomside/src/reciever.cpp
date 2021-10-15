@@ -34,8 +34,6 @@ void getDataStream(){       //serial data function
 
   breakstate = false;
 
-  delay(5);                // needed to allow all of the data in a packet be recieved
-
   if(Serial.available() == 0){  // check if serial buffer is empty
 
     Serial.print("r");          // request data from topside 
