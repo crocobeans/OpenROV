@@ -14,7 +14,7 @@ Servo d;
 
 void setup() {
   //begin serial and attach servos
-  Serial.begin(9600);
+  Serial.begin(57600);
   a.attach(2);
   b.attach(3);
   c.attach(4);
@@ -29,7 +29,7 @@ void getDataStream(){       //serial data function
 
   int counter = 0;
 
-  delay(20);                // needed to allow all of the data in a packet be recieved
+  delay(5);                // needed to allow all of the data in a packet be recieved
 
   if(Serial.available() == 0){  // check if serial buffer is empty
 

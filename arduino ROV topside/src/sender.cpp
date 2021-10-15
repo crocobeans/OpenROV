@@ -3,7 +3,7 @@
 int values[4] = {1000,1000,1000,1000};      //set array to minimum values
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(57600);
 
   for(int i=2; i<=5; i++){
     pinMode(i, INPUT);        //setup pwm pins 
