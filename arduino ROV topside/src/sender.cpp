@@ -18,7 +18,7 @@ void loop() {
 
     for(int i=0;i<=3;i++){
     int premap = pulseIn(i+2, HIGH);              // get pwm values 
-    values[i] = map(premap,1000,2000,100,900);    //map values for serial transmission 
+    values[i] = map(premap,980,2000,100,900);    //map values for serial transmission 
   }
 
   if(Serial.available() > 0){               //check if characters in serial buffer 
