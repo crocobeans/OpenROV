@@ -2,57 +2,66 @@
 #include <Servo.h>
 
 int values[4] = {0,0,0,0};
-int gotValues[4];
 char inbytes[12];
 bool breakstate = false; 
+int mixValues[4] ;
 
 
 //init servos 
 Servo a;
 Servo b;
 Servo c;
-Servo d;
 
 
 
 void setup() {
+
   //begin serial and attach servos
   Serial.begin(57600);
   a.attach(2);
   b.attach(3);
   c.attach(4);
-  d.attach(5);
+  pinMode(5, OUTPUT);
 
-  while(!Serial){        //wait for serial connection
+  //wait for serial connection
+  while(!Serial){        
 
   }
 }
 
-void getDataStream(){       //serial data function 
+//serial data function 
+void getDataStream(){       
 
   int counter = 0;
 
   breakstate = false;
+  
+  // check if serial buffer is empty so bad data isnt loaded
+  if(Serial.available() == 0){  
 
-  if(Serial.available() == 0){  // check if serial buffer is empty
+    // request data from topside
+    Serial.print("r");           
 
-    Serial.print("r");          // request data from topside 
+    //wait for packet
+    while (Serial.available()  < 12){   
 
-    while (Serial.available()  < 12){   //wait until whole packet has been sent 
+      //timeout to scrap partial / broken packets 
+      counter ++;                        
 
-     counter ++;                        //code to break while if whole packet not recieved 
+      delay(1);
 
-     delay(1);
+      if(counter > 50){
+        breakstate = true;
+        break;
 
-     if(counter > 50){
-      breakstate = true;
-      break;
-
-     }
+      }
     }
 
     if(breakstate == false){
-      Serial.readBytes(inbytes, 12);        //load packet into array 
+
+      //load packet into array 
+      Serial.readBytes(inbytes, 12);       
+
     }
 
     for(int i = 0 ; i<=11; i++){
@@ -62,19 +71,16 @@ void getDataStream(){       //serial data function
     }
   }
   
-  Serial.read();                        //make sure serial buffer is cleared
+  // clear serial buffer 
+  Serial.read();                        
 
   if(breakstate == false){
 
     for(int i = 0; i <= 3; i++){
 
-      values[i]= ((int(inbytes[i*3])-48)* 100) + ((int(inbytes[(i*3)+1])-48)*10) + (int(inbytes[(i*3)+2])-48);          // math to convert characters into their int values
+      // convert ascii values into their integers and convert them into their hundreds, tens and units columns 
+      values[i]= ((int(inbytes[i*3])-48)* 100) + ((int(inbytes[(i*3)+1])-48)*10) + (int(inbytes[(i*3)+2])-48);          
 
-      if(values[i]< 0){
-
-        values[i] = 0;                //if value is negative (never should be in any cases) reset it to 0 
-
-      }
     }
   }
 
@@ -83,19 +89,50 @@ void getDataStream(){       //serial data function
 
 void loop() {
 
-  getDataStream();            //call serial function
+  //call serial function
+  getDataStream();            
+  if(breakstate == false){
 
-  for(int i = 0; i<=3; i++){
+    //run mixes (and convert range to -400 - +400)
+    mixValues[0] = (values[1]-500) - (values[0]-500);   
+    mixValues[1] = (values[1]-500) + (values[0]-500);
+    mixValues[2] = (values[2]-500);
+    mixValues[3] = (values[3]-500);
 
-    gotValues[i] = map(values[i],100,900,0,180);         // map variables to within 0 - 180 range 
+    for(int i = 0 ; i <=3 ; i++){
 
+      // convert numbers back to 100 - 900 range (when i tried to map negatives it broke everything)
+      mixValues[i] = mixValues[i] + 500;          
+      
+      //clamp numbers to range so mixes dont create negative numbers
+      if(mixValues[i] > 900){      
+        mixValues[i] = 900;
+      }
+      else if(mixValues[i] < 100 ){
+        mixValues[i] = 100;
+      }
+
+    }
+
+    for(int i = 0; i<=3; i++){
+
+      // map variables to within 0 - 180 range 
+      mixValues[i] = map(mixValues[i],100,900,0,180);         
+
+    }
   }
 
-//set pwm outputs to variables (need to add mixers etc)
-  a.write(gotValues[0]);
-  b.write(gotValues[1]);
-  c.write(gotValues[2]);
-  d.write(gotValues[3]);
+  a.write(mixValues[0]);
+  b.write(mixValues[1]);
+  c.write(mixValues[2]);
+
+  //change light setting 
+  if(mixValues[3] > 90){
+    digitalWrite(5, HIGH);
+  }
+  else{
+    digitalWrite(5, LOW);
+  }
 
 }
 
