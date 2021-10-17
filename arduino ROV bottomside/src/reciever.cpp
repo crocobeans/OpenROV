@@ -17,7 +17,7 @@ Servo c;
 void setup() {
 
   //begin serial and attach servos
-  Serial.begin(57600);
+  Serial.begin(115200);
   a.attach(2);
   b.attach(3);
   c.attach(4);
