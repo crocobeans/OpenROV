@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "project_Seawolf/arduino ROV bottomside"
+		},
+		{
+			"name": "arduino ROV topside",
+			"path": "project_Seawolf/arduino ROV topside"
+		}
+	],
+	"settings": {}
+}
