@@ -1,138 +1,112 @@
 #include <Arduino.h>
 #include <Servo.h>
 
-int values[4] = {0,0,0,0};
-char inbytes[12];
-bool breakstate = false; 
-int mixValues[4] ;
+//define all the repeat use numbers
+#define waitTime 500
+#define packetrate 60
+#define bufferlength 4
+#define LEDpin 2
+#define minvalue 3
+#define maxvalue 255
+#define reqchar 2
 
+//calculate half of range for faster changing of min/max values and init arrays
+int halfway =(maxvalue + minvalue)/2;
+int values[4] = {halfway,halfway, halfway ,halfway};
+int mixValues[4] = {halfway,halfway,halfway,halfway};
 
 //init servos 
 Servo a;
 Servo b;
 Servo c;
 
-
-
 void setup() {
 
   //begin serial and attach servos
   Serial.begin(115200);
-  a.attach(2);
-  b.attach(3);
-  c.attach(4);
-  pinMode(5, OUTPUT);
+  a.attach(3);
+  b.attach(5);
+  c.attach(6);
+  pinMode(LEDpin, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
 
-  //wait for serial connection
-  while(!Serial){        
-
-  }
-}
-
-//serial data function 
-void getDataStream(){       
-
-  int counter = 0;
-
-  breakstate = false;
-  
-  // check if serial buffer is empty so bad data isnt loaded
-  if(Serial.available() == 0){  
-
-    // request data from topside
-    Serial.print("r");           
-
-    //wait for packet
-    while (Serial.available()  < 12){   
-
-      //timeout to scrap partial / broken packets 
-      counter ++;                        
-
-      delay(1);
-
-      if(counter > 50){
-        breakstate = true;
-        break;
-
-      }
-    }
-
-    if(breakstate == false){
-
-      //load packet into array 
-      Serial.readBytes(inbytes, 12);       
-
-    }
-
-    for(int i = 0 ; i<=11; i++){
-      if(int(inbytes[i]) < 48 or int(inbytes[i]) > 57){
-        breakstate = true;
-      }
-    }
-  }
-  
-  // clear serial buffer 
-  Serial.read();                        
-
-  if(breakstate == false){
-
-    for(int i = 0; i <= 3; i++){
-
-      // convert ascii values into their integers and convert them into their hundreds, tens and units columns 
-      values[i]= ((int(inbytes[i*3])-48)* 100) + ((int(inbytes[(i*3)+1])-48)*10) + (int(inbytes[(i*3)+2])-48);          
-
-    }
-  }
-
-  
 }
 
 void loop() {
 
-  //call serial function
-  getDataStream();            
-  if(breakstate == false){
+  //begin timer for computation time compensation
+  int t1 = millis();
 
-    //run mixes (and convert range to -400 - +400)
-    mixValues[0] = (values[1]-500) - (values[0]-500);   
-    mixValues[1] = (values[1]-500) + (values[0]-500);
-    mixValues[2] = (values[2]-500);
-    mixValues[3] = (values[3]-500);
+  //request packet
+  Serial.write(reqchar);
 
-    for(int i = 0 ; i <=3 ; i++){
+  bool breakstate = false;
 
-      // convert numbers back to 100 - 900 range (when i tried to map negatives it broke everything)
-      mixValues[i] = mixValues[i] + 500;          
-      
-      //clamp numbers to range so mixes dont create negative numbers
-      if(mixValues[i] > 900){      
-        mixValues[i] = 900;
-      }
-      else if(mixValues[i] < 100 ){
-        mixValues[i] = 100;
-      }
-
+  //hang program until packet is recieved or timeout 
+  for(int i = 0; Serial.available() < bufferlength; i++){
+    if(i > waitTime){
+      breakstate = true;
+      break;
     }
+    delay(1);
+  }
 
-    for(int i = 0; i<=3; i++){
-
-      // map variables to within 0 - 180 range 
-      mixValues[i] = map(mixValues[i],100,900,0,180);         
-
+  //read data from packet into array 
+  if(!breakstate){
+    for(int i =0 ; i < bufferlength; i++){
+      values[i] = Serial.read();
     }
   }
 
+  //run mixes (and convert range to -128 <-> +128)
+  mixValues[0] = (values[1]-halfway) - (values[0]-halfway);   
+  mixValues[1] = (values[1]-halfway) + (values[0]-halfway);
+  mixValues[2] = (values[2]-halfway);
+  mixValues[3] = (values[3]-halfway);
+
+  for(int i = 0 ; i <=3 ; i++){
+
+    // convert numbers back to 3 <-> 255 range (when i tried to map negatives it broke everything)
+    mixValues[i] += halfway;          
+    
+    //clamp numbers to range so mixes dont create negative numbers
+    if(mixValues[i] > maxvalue){      
+      mixValues[i] = maxvalue;
+    }
+    else if(mixValues[i] < minvalue ){
+      mixValues[i] = minvalue;
+    }
+
+  }
+
+  for(int i = 0; i<=3; i++){
+
+    // map variables to within 0 - 180 range 
+    mixValues[i] = map(mixValues[i],minvalue,maxvalue,0,180);         
+
+  }
+
+  //update motor speed
   a.write(mixValues[0]);
   b.write(mixValues[1]);
   c.write(mixValues[2]);
 
-  //change light setting 
+  //update light 
   if(mixValues[3] > 90){
-    digitalWrite(5, HIGH);
+    digitalWrite(LEDpin, HIGH);
   }
   else{
-    digitalWrite(5, LOW);
+    digitalWrite(LEDpin, LOW);
   }
+
+  //calculate delay time (if any) to maintain constant packet rate 
+  int HzDelay = (1000/packetrate)-(millis()-t1);
+
+  if(HzDelay < 0){
+    HzDelay =0;
+  }
+
+  delay(HzDelay);
 
 }
 

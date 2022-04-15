@@ -1,49 +1,53 @@
 #include <Arduino.h>
 
-int values[4] = {1000,1000,1000,1000};      //set array to minimum values
+//define repeat use numbers
+#define minvalue 3
+#define maxvalue 255
+#define reqchar 2
+
+//calculate half way point to init arrays 
+int halfway =(maxvalue + minvalue)/2;
+
+//set array to mid values
+int values[4] = {halfway,halfway,halfway,halfway};
 
 void setup() {
+
+  //start serial and init pwm read pins 
   Serial.begin(115200);
-
-  for(int i=2; i<=5; i++){
-    pinMode(i, INPUT);        //setup pwm pins 
-  }
-
-  while(!Serial){         //wait for serial connection 
-
+  for(int i=2; i<6; i++){
+    pinMode(i, INPUT);
   }
 }
 
 void loop() {
 
-    for(int i=0;i<=3;i++){
-    int premap = pulseIn(i+2, HIGH);              // get pwm values 
-    values[i] = map(premap,980,2000,100,900);    //map values for serial transmission 
-  }
+  while(Serial.peek() == reqchar){
 
-  if(Serial.available() > 0){               //check if characters in serial buffer 
-    int inl = Serial.read();                // read characters in serial buffer 
-    
-    if(inl == 114){                         // if character == ascii code for r (request character)
-
-      for(int i=0; i <=3 ; i++){            
-
-        if(int l = String(values[i]).length() < 3){         // add leading zeroes to values to be sent 
-
-          Serial.print("0");
-
-          if(l < 2){
-
-            Serial.print("0");
-
-          }
-        }
-
-        Serial.print(values[i]);                // send values 
-
-      }
+    for(int i = 0; i < 4; i++){
+      Serial.write(values[i]);
     }
 
+    for(int i=0;i<4;i++){
+      // get pwm values
+      int premap = pulseIn(i+2, HIGH);
+
+      //map values to 3 <-> 255 for serial transmission
+      values[i] = map(premap,1000,2000,minvalue,maxvalue);
+
+      //clamp values
+      if(values[i]<minvalue){
+        values[i]=minvalue;
+      }
+      else if(values[i]>maxvalue){
+        values[i]=maxvalue;
+      }
+    }
   }
+
+  //wipe serial buffer 
+  do{
+  Serial.read();
+  }while(Serial.available()>0);
 
 }
