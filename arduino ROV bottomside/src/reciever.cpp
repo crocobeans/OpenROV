@@ -70,7 +70,7 @@ void loop() {
     mixValues[2] = (values[2]-halfway);
     mixValues[3] = (values[3]-halfway);
 
-    for(int i = 0 ; i <=3 ; i++){
+    for(int i = 0 ; i < channels ; i++){
 
       // convert numbers back to 3 <-> 255 range (when i tried to map negatives it broke everything)
       mixValues[i] += halfway;          
@@ -85,7 +85,7 @@ void loop() {
 
     }
 
-    for(int i = 0; i<=3; i++){
+    for(int i = 0; i<channels; i++){
 
       // map variables to within 0 - 180 range 
       mixValues[i] = map(mixValues[i],minvalue,maxvalue,0,180);         
