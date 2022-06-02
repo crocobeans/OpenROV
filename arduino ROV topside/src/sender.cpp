@@ -4,34 +4,46 @@
 #define minvalue 3
 #define maxvalue 255
 #define reqchar 2
-#define packLen 5
-#define channels 4
+#define channels 8
+#define packLen channels+1
 
 //calculate half way point to init arrays 
-uint8_t halfway =(maxvalue + minvalue)/2;
+uint16_t halfway =(maxvalue + minvalue)/2;
 
 //set array to mid values
-uint8_t values[packLen] = {halfway,halfway,halfway,halfway};
+uint16_t values[packLen];
 
-uint8_t crcGen(uint8_t inNums[packLen]);
+uint16_t crcGen(uint16_t inNums[packLen]);
 
 void setup() {
 
+  for(int i=0;i<packLen;i++){
+  values[i] = halfway;
+  }
+
   //start serial and init pwm read pins 
   Serial.begin(115200);
-  for(int i=2; i<6; i++){
-    pinMode(i, INPUT);
-  }
+
+  pinMode(2, INPUT);
+  pinMode(LED_BUILTIN,OUTPUT);
+
 }
 
 void loop() {
 
+  //wait for ppm sync pulse
+  while(pulseIn(2,LOW,1000) != 0){
+
+  }
+  //get ppm values
   for(int i=0;i<channels;i++){
-    // get pwm values
-    int premap = pulseIn(i+2, HIGH);
+    values[i] = pulseIn(2,HIGH);
+  }
+
+  for(int i=0;i<channels;i++){
 
     //map values to 3 <-> 255 for serial transmission
-    values[i] = map(premap,1000,2000,minvalue,maxvalue);
+    values[i] = map(values[i],590,1610,minvalue,maxvalue);
 
     //clamp values
     if(values[i]<minvalue){
@@ -67,15 +79,13 @@ void loop() {
 
     }
   }
-
 }
 
-uint8_t crcGen(uint8_t inNums[packLen]){
-  int answer =0 ;
+//create crc
+uint16_t crcGen(uint16_t inNums[packLen]){
+  int total =0 ;
   for(int i =0;i<channels;i++){
-    answer += inNums[i];
+    total += inNums[i];
   }
-  answer %= maxvalue-minvalue;
-  answer += minvalue;
-  return(answer);
+  return((total % (maxvalue-minvalue))+minvalue);
 }
