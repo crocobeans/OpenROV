@@ -1,13 +1,7 @@
 {
-	"folders": [
-		{
-			"name": "arduino ROV bottomside",
-			"path": "arduino ROV bottomside"
-		},
-		{
-			"name": "arduino ROV topside",
-			"path": "arduino ROV topside"
-		}
-	],
-	"settings": {}
+    "folders": [
+        {
+            "path": "."
+        }
+    ]
 }
